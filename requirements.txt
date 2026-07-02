@@ -1,0 +1,4 @@
+zxcvbn
+requests
+zxcvbn
+hashlib
