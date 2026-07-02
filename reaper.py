@@ -2,7 +2,9 @@ from zxcvbn import zxcvbn
 import re
 import hashlib
 import requests
-import time
+import typer
+
+app = typer.Typer(add_completion=False)
 
 DICTIONARY_WEIGHTS = {
     "common": 5,
@@ -12,6 +14,7 @@ DICTIONARY_WEIGHTS = {
     "darkweb": 20
 }
 
+
 def load_dictionary(path):
     try:
         with open(path, "r", encoding="utf-8", errors="ignore") as f:
@@ -20,13 +23,11 @@ def load_dictionary(path):
         print(f"[!] DICTIONARY NOT FOUND: {path}")
         return set()
 
+
 def check_dictionary(password, dictionaries):
     password = password.lower()
-    hits = []
-    for name, dic in dictionaries.items():
-        if password in dic:
-            hits.append(name)
-    return hits
+    return [name for name, dic in dictionaries.items() if password in dic]
+
 
 def normalize(password):
     replacements = {
@@ -42,12 +43,14 @@ def normalize(password):
         result = result.replace(k, v)
     return result
 
+
 def check_variants(password, dictionaries):
     normalized = normalize(password)
     for name, dic in dictionaries.items():
         if normalized in dic:
             return True, normalized, name
     return False, normalized, None
+
 
 def detect_human_patterns(password):
     patterns = []
@@ -61,43 +64,74 @@ def detect_human_patterns(password):
         patterns.append("Common suffix")
     return patterns
 
+
 def check_hibp(password):
+    """
+    Consulta Have I Been Pwned usando el modelo de k-anonimato:
+    solo se envían los primeros 5 caracteres del hash SHA-1, nunca
+    la contraseña ni el hash completo.
+    Retorna None si la consulta falló (no se pudo determinar),
+    y un int >= 0 si se pudo consultar.
+    """
     sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
-    prefix = sha1[:5]
-    suffix = sha1[5:]
+    prefix, suffix = sha1[:5], sha1[5:]
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
     try:
         response = requests.get(url, timeout=5)
-        if response.status_code != 200:
-            return 0
-        hashes = response.text.splitlines()
-        for line in hashes:
-            h, count = line.split(":")
-            if h == suffix:
-                return int(count)
-    except:
-        pass
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"[!] HIBP lookup failed: {e}")
+        return None
+
+    for line in response.text.splitlines():
+        h, count = line.split(":")
+        if h == suffix:
+            return int(count)
     return 0
 
-def calculate_score(password, dictionary_hits, hibp_count, patterns, is_variant):
-    score = 100
-    if len(password) < 8:
-        score -= 25
-    elif len(password) < 12:
-        score -= 10
-    dictionary_penalty = 0
-    for hit in dictionary_hits:
-        weight = DICTIONARY_WEIGHTS.get(hit, 5)
-        if hit == "darkweb":
-            weight += 5
-        dictionary_penalty += weight
+
+def run_zxcvbn(password):
+    """
+    zxcvbn estima la fortaleza real basándose en entropía, patrones
+    de teclado, fechas, sustituciones l33t y coincidencias con listas
+    de palabras comunes que trae integradas. score va de 0 (pésima)
+    a 4 (excelente).
+    """
+    result = zxcvbn(password)
+    return {
+        "score": result["score"],
+        "crack_time_display": result["crack_times_display"]["offline_slow_hashing_1e4_per_second"],
+        "warning": result["feedback"]["warning"],
+        "suggestions": result["feedback"]["suggestions"],
+    }
+
+
+def calculate_score(dictionary_hits, hibp_count, patterns, is_variant, zx_score):
+    # Base real de fortaleza: viene de zxcvbn, no de números inventados.
+    # zx_score va de 0 a 4 -> lo escalamos a 0-100.
+    score = zx_score * 25
+
+    # Penalizaciones por señales que zxcvbn NO puede ver por sí solo:
+    # coincidencia literal con listas de filtraciones reales y
+    # apariciones confirmadas en breaches (HIBP).
+    dictionary_penalty = sum(
+        DICTIONARY_WEIGHTS.get(hit, 5) + (5 if hit == "darkweb" else 0)
+        for hit in dictionary_hits
+    )
     score -= dictionary_penalty
+
     if is_variant:
-        score -= 20
-    if hibp_count > 0:
+        score -= 15
+
+    if hibp_count is not None and hibp_count > 0:
         score -= 40
-    score -= len(patterns) * 10
-    return max(score, 0)
+
+    # Los patrones "humanos" ya los detecta zxcvbn en buena medida,
+    # así que aquí pesan menos que antes (eran -10, ahora -5).
+    score -= len(patterns) * 5
+
+    return max(0, min(100, round(score)))
+
 
 def classify(score):
     if score <= 20:
@@ -111,13 +145,32 @@ def classify(score):
     else:
         return "REAPER-CLASS"
 
-def print_mgs_separator():
+
+def mask_password(password):
+    if len(password) <= 2:
+        return "*" * len(password)
+    return password[0] + "*" * (len(password) - 2) + password[-1]
+
+
+def print_separator():
     print("-" * 60)
 
-def print_mgs_label(label, value, indent=2):
-    print(" " * indent + f"[{label}]".ljust(18) + f" {value}")
 
-def generate_report(password, score, classification, hibp_count, dictionary_hits, patterns, normalized, variant_source):
+def print_label(label, value):
+    print("  " + f"[{label}]".ljust(20) + f" {value}")
+
+
+def print_list_label(label, items, empty_text):
+    if items:
+        print_label(label, f"{len(items)} detectado(s)" if items else "")
+        for item in items:
+            print(f"                       - {item}")
+    else:
+        print_label(label, empty_text)
+
+
+def generate_report(display_password, score, classification, hibp_count,
+                     dictionary_hits, patterns, normalized, variant_source, zx):
     print("\n")
     print("  ██████  ███████  █████  ██████  ███████ ██████")
     print("  ██   ██ ██      ██   ██ ██   ██ ██      ██   ██")
@@ -125,87 +178,80 @@ def generate_report(password, score, classification, hibp_count, dictionary_hits
     print("  ██   ██ ██      ██   ██ ██      ██      ██   ██")
     print("  ██   ██ ███████ ██   ██ ██      ███████ ██   ██")
     print("")
-    print("  [PASSWORD SECURITY ANALYSIS - v2.0]")
+    print("  [PASSWORD SECURITY ANALYSIS - v2.1]")
     print("  [CODENAME: REAPER]")
     print("")
-    print_mgs_separator()
+    print_separator()
     print("")
-    
-    print("  [TARGET]".ljust(18) + f" {password}")
-    print("  [NORMALIZED]".ljust(18) + f" {normalized}")
+
+    print_label("TARGET", display_password)
+    print_label("NORMALIZED", normalized)
     print("")
-    print_mgs_separator()
+    print_separator()
     print("")
-    
-    print("  [SCORE]".ljust(18) + f" {score}/100")
-    print("  [STATUS]".ljust(18) + f" {classification}")
+
+    print_label("SCORE", f"{score}/100")
+    print_label("STATUS", classification)
+    print_label("EST. CRACK TIME", zx["crack_time_display"])
     print("")
-    print_mgs_separator()
+    print_separator()
     print("")
-    
-    print("  [BREACH DATABASE]".ljust(18), end="")
-    if hibp_count > 0:
-        print(f" {hibp_count} occurrences")
-    else:
-        print(" NOT FOUND")
+
+    print_label(
+        "BREACH DATABASE",
+        f"{hibp_count} occurrences" if hibp_count else
+        ("UNKNOWN (lookup failed)" if hibp_count is None else "NOT FOUND")
+    )
     print("")
-    
-    print("  [DICTIONARY HITS]".ljust(18), end="")
-    if dictionary_hits:
-        print(f" {len(dictionary_hits)} hit(s)")
-        for d in dictionary_hits:
-            print(f"                     - {d}")
-    else:
-        print(" CLEAR")
+
+    print_list_label("DICTIONARY HITS", dictionary_hits, "CLEAR")
     print("")
-    
-    print("  [VARIANT DETECTION]".ljust(18), end="")
-    if variant_source:
-        print(f" {variant_source.upper()}")
-    else:
-        print(" NEGATIVE")
+
+    print_label("VARIANT DETECTION", variant_source.upper() if variant_source else "NEGATIVE")
     print("")
-    
-    print("  [HUMAN PATTERNS]".ljust(18), end="")
-    if patterns:
-        print(f" {len(patterns)} detected")
-        for p in patterns:
-            print(f"                     - {p}")
-    else:
-        print(" NONE")
+
+    print_list_label("HUMAN PATTERNS", patterns, "NONE")
     print("")
-    
-    print_mgs_separator()
+
+    if zx["warning"] or zx["suggestions"]:
+        print_separator()
+        print("")
+        print_label("ZXCVBN FEEDBACK", zx["warning"] or "-")
+        for s in zx["suggestions"]:
+            print(f"                       - {s}")
+        print("")
+
+    print_separator()
     print("")
-    
-    if classification == "CRITICAL":
-        print("  !!! CRITICAL THREAT DETECTED !!!")
-        print("  Recommendation: CHANGE IMMEDIATELY")
-        print("  This password is compromised.")
-    elif classification == "WEAK":
-        print("  [!] WEAK PASSWORD")
-        print("  Recommendation: Use a stronger password")
-        print("  Avoid common words and patterns.")
-    elif classification == "MODERATE":
-        print("  [~] MODERATE SECURITY")
-        print("  Recommendation: Consider strengthening")
-        print("  with more complexity and length.")
-    elif classification == "STRONG":
-        print("  [OK] STRONG PASSWORD")
-        print("  This password provides good security.")
-    else:
-        print("  [+] REAPER-CLASS SECURITY")
-        print("  Maximum security level achieved.")
-        print("  Your password is among the strongest.")
-    
+
+    messages = {
+        "CRITICAL": ("!!! CRITICAL THREAT DETECTED !!!",
+                     "Recommendation: CHANGE IMMEDIATELY",
+                     "This password is compromised."),
+        "WEAK": ("[!] WEAK PASSWORD",
+                 "Recommendation: Use a stronger password",
+                 "Avoid common words and patterns."),
+        "MODERATE": ("[~] MODERATE SECURITY",
+                      "Recommendation: Consider strengthening",
+                      "with more complexity and length."),
+        "STRONG": ("[OK] STRONG PASSWORD",
+                    "This password provides good security.",
+                    ""),
+        "REAPER-CLASS": ("[+] REAPER-CLASS SECURITY",
+                          "Maximum security level achieved.",
+                          "Your password is among the strongest."),
+    }
+    for line in messages[classification]:
+        if line:
+            print(f"  {line}")
+
     print("")
-    print_mgs_separator()
+    print_separator()
     print("  [END OF REPORT]")
     print("")
 
-def analizar_password(password):
-    print("\033[2J\033[H")
-    
+
+def analizar_password(password, mask=True, use_hibp=True):
     dictionaries = {
         "common": load_dictionary("wordlists/common.txt"),
         "rockyou": load_dictionary("wordlists/rockyou.txt"),
@@ -213,16 +259,41 @@ def analizar_password(password):
         "ncsc": load_dictionary("wordlists/seclists/100k-most-used-passwords-NCSC.txt"),
         "darkweb": load_dictionary("wordlists/seclists/darkweb2017_top-10000.txt"),
     }
-    
+
     dictionary_hits = check_dictionary(password, dictionaries)
     is_variant, normalized, variant_source = check_variants(password, dictionaries)
     patterns = detect_human_patterns(password)
-    hibp_count = check_hibp(password)
-    score = calculate_score(password, dictionary_hits, hibp_count, patterns, is_variant)
+    zx = run_zxcvbn(password)
+    hibp_count = check_hibp(password) if use_hibp else None
+
+    score = calculate_score(dictionary_hits, hibp_count, patterns, is_variant, zx["score"])
     classification = classify(score)
-    
-    generate_report(password, score, classification, hibp_count, dictionary_hits, patterns, normalized, variant_source)
+
+    display_password = mask_password(password) if mask else password
+
+    generate_report(display_password, score, classification, hibp_count,
+                     dictionary_hits, patterns, normalized, variant_source, zx)
+
+
+@app.command()
+def main(
+    password: str = typer.Option(
+        None, "--password", "-p",
+        help="Contraseña a analizar. Si no se da, se pide de forma interactiva (sin eco en pantalla)."
+    ),
+    mask: bool = typer.Option(
+        True, "--mask/--no-mask",
+        help="Enmascarar la contraseña en el reporte final."
+    ),
+    hibp: bool = typer.Option(
+        True, "--hibp/--no-hibp",
+        help="Consultar Have I Been Pwned (requiere conexión a internet)."
+    ),
+):
+    if password is None:
+        password = typer.prompt("Enter password to analyze", hide_input=True)
+    analizar_password(password, mask=mask, use_hibp=hibp)
+
 
 if __name__ == "__main__":
-    password = input("Enter password to analyze: ")
-    analizar_password(password)
+    app()

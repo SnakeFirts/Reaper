@@ -40,6 +40,8 @@ Analizador de seguridad de contraseñas en terminal. Evalúa una contraseña con
 ```bash
 git clone https://github.com/SnakeFirts/Reaper.git
 cd Reaper
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
