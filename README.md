@@ -1,199 +1,104 @@
-# <span style="color:#00ff00;">REAPER</span> - <span style="color:#ff6b6b;">Password Security Analysis Tool</span>
+```
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣴⣶⣦⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⣿⣿⣷⣦⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣴⣶⣶⣶⣦⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣴⣾⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣤⣤⣤⣀⣀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢀⣤⣤⣀⣿⣿⣿⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠋⠉⠉⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣾⣿⣿⣿⣿⣿⡟⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣦⣤⣀⣀⣤⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡏⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⣿⣿⠙⢿⣿⣿⡇⠀⣰⣿⣿⣿⣿⣿⣿⣿⡿⠿⠿⠿⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢿⣿⣿⣿⡇⠀⡀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠛⢿⣦⣿⣿⠀⠀⠙⠿⠃⣰⣿⣿⣿⡿⠟⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠻⢿⣿⣿⣿⣿⣿⡏⢸⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠙⢿⡏⠀⠀⠀⠀⢰⣿⣿⡿⠋⠀⠀⠀⠀⣠⣶⡄⠀⠀⠀⠀⠀⡀⠀⠀⠀⠻⣿⣿⣿⣿⣿⣼⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⢀⣿⣿⠏⠀⠀⠀⠀⠀⢠⣿⣿⡇⠀⠀⠀⠀⣾⣿⣧⠀⠀⠀⠘⣿⣿⣿⣿⣇⠿⠛⠉⠀⣿⣿⠁⡀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⡏⠀⠀⠀⠀⠀⠀⢸⣿⣿⠃⠀⠀⠀⠀⣿⣿⡟⠀⠀⠀⠀⠈⣿⣿⣿⣿⠀⠀⠀⢸⣿⣿⣿⠿⠃⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⣿⠀⠀⠀⢀⠀⠀⠀⠀⠉⠉⠀⠀⠀⠀⠀⠿⡿⠃⠀⠀⠀⠀⠀⢹⣿⣿⣿⠀⠀⠀⠘⠟⠉⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⡇⠀⠀⠀⢸⣿⣿⣶⣶⠀⣰⣤⣤⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⠁⠀⠀⠀⠐⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣇⣼⣿⣷⣶⡖⠀⠀⠀⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⠀⠀⠀⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⠀⠀⣿⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡏⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⣿⣿⡧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⠿⠿⠛⠛⠉⠀⠀⠀⠀⠀⠀⠀⣿⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⡿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣶⣾⣿⣿⣶⣤⣀⣀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣶⣶⣤⣄⣀⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⡟⠋⢉⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠋⠁⠀⠀⠀⣼⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡆⠈⠉⠛⠻⢿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⠿⠛⠉⠁⠀⢿⣿⣿⣿⣿⣿⣿⡟⠻⢿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡴⠟⠋⠀⠀⠀⠀⠀⠀⠈⣿⣿⣿⣿⣿⠋⠀⠀⠀⠙⠿⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⣿⡿⠃⠀⠀⠀⠀⠀⠀⠈⠻⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⡿⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+```
 
-<span style="color:#ffd93d;">A comprehensive password security analysis tool that evaluates password strength using multiple criteria including dictionary attacks, breach databases, pattern detection, and variant analysis.</span>
+# REAPER
 
-## <span style="color:#6bcfff;">Features</span>
+Analizador de seguridad de contraseñas en terminal. Evalúa una contraseña contra diccionarios de filtraciones conocidas, detecta variantes con leetspeak, busca patrones humanos comunes y consulta la base de datos de Have I Been Pwned (HIBP) usando el modelo de k-anonimato, sin enviar la contraseña completa por la red.
 
-- <span style="color:#ffd93d;">**Multi-dictionary checking**</span>: Tests passwords against multiple wordlists including:
-  - <span style="color:#6bcfff;">Common passwords</span>
-  - <span style="color:#6bcfff;">RockYou dataset</span>
-  - <span style="color:#6bcfff;">Xato 10-million password list</span>
-  - <span style="color:#6bcfff;">NCSC top 100k passwords</span>
-  - <span style="color:#6bcfff;">DarkWeb 2017 top 10000 passwords</span>
+```
+  ██████  ███████  █████  ██████  ███████ ██████
+  ██   ██ ██      ██   ██ ██   ██ ██      ██   ██
+  ██████  █████   ███████ ██████  █████   ██████
+  ██   ██ ██      ██   ██ ██      ██      ██   ██
+  ██   ██ ███████ ██   ██ ██      ███████ ██   ██
+```
 
-- <span style="color:#ffd93d;">**Breach database integration**</span>: Checks against Have I Been Pwned (HIBP) API to detect if password has been exposed in data breaches
+## Características
 
-- <span style="color:#ffd93d;">**Variant detection**</span>: Identifies common leetspeak substitutions (e.g., "p@ssw0rd" -> "password")
+- **Chequeo contra diccionarios**: common, rockyou, xato-net, NCSC top 100k y darkweb top 10k, cada uno con un peso distinto en el score final.
+- **Detección de variantes**: normaliza leetspeak (`4→a`, `3→e`, `1→i`, `0→o`, etc.) para detectar contraseñas como `P4ssw0rd` aunque no estén literales en el diccionario.
+- **Patrones humanos**: repetición de caracteres, secuencias simples (`123`, `abc`), prefijos/sufijos comunes.
+- **Integración con HIBP**: consulta cuántas veces apareció el hash de la contraseña en filtraciones conocidas, usando solo los primeros 5 caracteres del hash SHA-1 (k-anonimato).
+- **Score y clasificación**: de `CRITICAL` a `REAPER-CLASS`, con reporte estilo terminal.
 
-- <span style="color:#ffd93d;">**Pattern recognition**</span>: Detects common human patterns:
-  - <span style="color:#6bcfff;">Character repetition</span>
-  - <span style="color:#6bcfff;">Sequential patterns (123, abc)</span>
-  - <span style="color:#6bcfff;">Common prefixes/suffixes</span>
-
-- <span style="color:#ffd93d;">**Weighted scoring system**</span>: Calculates security score based on:
-  - <span style="color:#6bcfff;">Password length</span>
-  - <span style="color:#6bcfff;">Dictionary hits (with weighted values)</span>
-  - <span style="color:#6bcfff;">Breach occurrences</span>
-  - <span style="color:#6bcfff;">Pattern detection</span>
-  - <span style="color:#6bcfff;">Variant modifications</span>
-
-- <span style="color:#ffd93d;">**Classification system**</span>: Categorizes passwords into:
-  - <span style="color:#ff6b6b;">CRITICAL: 0-20 points</span>
-  - <span style="color:#ffa94d;">WEAK: 21-40 points</span>
-  - <span style="color:#ffd93d;">MODERATE: 41-70 points</span>
-  - <span style="color:#6bcfff;">STRONG: 71-90 points</span>
-  - <span style="color:#00ff00;">REAPER-CLASS: 91-100 points</span>
-
-- <span style="color:#ffd93d;">**Visual report**</span>: Generates detailed MGS-style reports with all analysis results
-
-## <span style="color:#6bcfff;">Installation</span>
-
-### <span style="color:#ffd93d;">Prerequisites</span>
-
-- <span style="color:#6bcfff;">Python 3.6 or higher</span>
-- <span style="color:#6bcfff;">pip package manager</span>
-
-### <span style="color:#ffd93d;">Required Dependencies</span>
+## Instalación
 
 ```bash
-pip install zxcvbn requests
+git clone https://github.com/SnakeFirts/Reaper.git
+cd Reaper
+pip install -r requirements.txt
 ```
 
-### <span style="color:#ffd93d;">Directory Structure</span>
+### Diccionarios
 
-Create the following directory structure for wordlists:
+Los wordlists **no** están incluidos en el repo (algunos superan el límite de 100MB de GitHub). Descárgalos así:
 
-```
-<span style="color:#6bcfff;">project/</span>
-├── <span style="color:#6bcfff;">wordlists/</span>
-│   ├── <span style="color:#ffd93d;">common.txt</span>
-│   ├── <span style="color:#ffd93d;">rockyou.txt</span>
-│   ├── <span style="color:#ffd93d;">xato-net-10-million-passwords.txt</span>
-│   └── <span style="color:#6bcfff;">seclists/</span>
-│       ├── <span style="color:#ffd93d;">100k-most-used-passwords-NCSC.txt</span>
-│       └── <span style="color:#ffd93d;">darkweb2017_top-10000.txt</span>
-└── <span style="color:#00ff00;">reaper.py</span>
+```bash
+mkdir -p wordlists/seclists
+curl -L -o wordlists/rockyou.txt https://raw.githubusercontent.com/brannondorsey/naive-hashcat/master/wordlists/rockyou.txt
+# xato-net y las listas de seclists: descargar desde SecLists (github.com/danielmiessler/SecLists)
 ```
 
-## <span style="color:#6bcfff;">Usage</span>
+También puedes usar el script `scripts/download_wordlists.sh` (ver sección Roadmap) si prefieres automatizarlo.
 
-### <span style="color:#ffd93d;">Basic Usage</span>
-
-Run the script and enter the password when prompted:
+## Uso
 
 ```bash
 python reaper.py
-Enter password to analyze: your_password_here
+Enter password to analyze: ********
 ```
 
-### <span style="color:#ffd93d;">Programmatic Usage</span>
+El programa limpia la pantalla y muestra un reporte completo con score, hits de diccionario, detección de variantes, patrones detectados y una recomendación final.
 
-```python
-from reaper import analizar_password
-
-# Analyze a password
-analizar_password("my_secure_password")
-```
-
-## <span style="color:#6bcfff;">Wordlist Setup</span>
-
-The tool requires wordlist files to perform dictionary checks. You can obtain these from:
-
-- <span style="color:#ffd93d;">**common.txt**</span>: Common password lists
-- <span style="color:#ffd93d;">**rockyou.txt**</span>: Available from the RockYou dataset
-- <span style="color:#ffd93d;">**xato-net-10-million-passwords.txt**</span>: Available from Xato's password list
-- <span style="color:#ffd93d;">**NCSC list**</span>: UK National Cyber Security Centre's top 100k passwords
-- <span style="color:#ffd93d;">**DarkWeb 2017**</span>: Darkweb credential dumps
-
-### <span style="color:#ffd93d;">Custom Dictionary Configuration</span>
-
-You can modify the dictionary weights in the `DICTIONARY_WEIGHTS` dictionary:
-
-```python
-<span style="color:#6bcfff;">DICTIONARY_WEIGHTS = {
-    "common": 5,
-    "rockyou": 15,
-    "xato": 10,
-    "ncsc": 12,
-    "darkweb": 20
-}</span>
-```
-
-## <span style="color:#6bcfff;">Report Example</span>
+## Estructura del proyecto
 
 ```
-  <span style="color:#00ff00;">██████  ███████  █████  ██████  ███████ ██████</span>
-  <span style="color:#00ff00;">██   ██ ██      ██   ██ ██   ██ ██      ██   ██</span>
-  <span style="color:#00ff00;">██████  █████   ███████ ██████  █████   ██████</span>
-  <span style="color:#00ff00;">██   ██ ██      ██   ██ ██      ██      ██   ██</span>
-  <span style="color:#00ff00;">██   ██ ███████ ██   ██ ██      ███████ ██   ██</span>
-
-  <span style="color:#6bcfff;">[PASSWORD SECURITY ANALYSIS - v2.0]</span>
-  <span style="color:#6bcfff;">[CODENAME: REAPER]</span>
-
-<span style="color:#ffd93d;">------------------------------------------------------------</span>
-
-  <span style="color:#6bcfff;">[TARGET]</span>            password123
-  <span style="color:#6bcfff;">[NORMALIZED]</span>        password123
-
-<span style="color:#ffd93d;">------------------------------------------------------------</span>
-
-  <span style="color:#6bcfff;">[SCORE]</span>             <span style="color:#ffa94d;">35/100</span>
-  <span style="color:#6bcfff;">[STATUS]</span>            <span style="color:#ffa94d;">WEAK</span>
-
-<span style="color:#ffd93d;">------------------------------------------------------------</span>
-
-  <span style="color:#6bcfff;">[BREACH DATABASE]</span>   <span style="color:#ff6b6b;">157 occurrences</span>
-  <span style="color:#6bcfff;">[DICTIONARY HITS]</span>   <span style="color:#ffa94d;">2 hit(s)</span>
-                     - common
-                     - rockyou
-  <span style="color:#6bcfff;">[VARIANT DETECTION]</span> <span style="color:#00ff00;">NEGATIVE</span>
-  <span style="color:#6bcfff;">[HUMAN PATTERNS]</span>    <span style="color:#ffa94d;">2 detected</span>
-                     - Character repetition
-                     - Common suffix
-
-<span style="color:#ffd93d;">------------------------------------------------------------</span>
-
-  <span style="color:#ffa94d;">[!] WEAK PASSWORD</span>
-  <span style="color:#ffa94d;">Recommendation: Use a stronger password</span>
-  <span style="color:#ffa94d;">Avoid common words and patterns.</span>
-
-<span style="color:#ffd93d;">------------------------------------------------------------</span>
-  <span style="color:#6bcfff;">[END OF REPORT]</span>
+Reaper/
+├── reaper.py
+├── wordlists/
+│   ├── common.txt
+│   ├── rockyou.txt          (no versionado, ver Instalación)
+│   ├── xato-net-10-million-passwords.txt
+│   └── seclists/
+│       ├── 100k-most-used-passwords-NCSC.txt
+│       └── darkweb2017_top-10000.txt
+├── requirements.txt
+└── README.md
 ```
 
-## <span style="color:#6bcfff;">Security Considerations</span>
+## Stack
 
-- <span style="color:#ffd93d;">The tool sends password hashes (first 5 characters only) to the HIBP API</span>
-- <span style="color:#00ff00;">Full passwords are never transmitted over the network</span>
-- <span style="color:#00ff00;">All analysis is performed locally except the HIBP check</span>
-- <span style="color:#ffd93d;">Wordlist files should be stored securely</span>
+- Python 3
+- [zxcvbn](https://github.com/dropbox/zxcvbn) — estimación de fortaleza
+- requests — consultas a la API de HIBP
 
-## <span style="color:#6bcfff;">Limitations</span>
+## Disclaimer
 
-- <span style="color:#ffa94d;">Requires internet connection for HIBP checks</span>
-- <span style="color:#ffa94d;">Relies on wordlist quality for dictionary detection</span>
-- <span style="color:#ffa94d;">Performance depends on wordlist file sizes</span>
-- <span style="color:#ffa94d;">Does not check for context-specific weaknesses (e.g., personal information)</span>
-
-## <span style="color:#6bcfff;">Contributing</span>
-
-<span style="color:#ffd93d;">Contributions are welcome. Please ensure your code maintains the existing style and includes appropriate documentation.</span>
-
-## <span style="color:#6bcfff;">License</span>
-
-<span style="color:#ffd93d;">This project is licensed under the MIT License - see the LICENSE file for details.</span>
-
-## <span style="color:#6bcfff;">Disclaimer</span>
-
-<span style="color:#ffa94d;">This tool is for educational and security assessment purposes only. It is intended to help users understand password security and make informed decisions about their password choices. The tool does not store or transmit passwords (except for the HIBP hash prefix check).</span>
-
-## <span style="color:#6bcfff;">Author</span>
-
-<span style="color:#ffd93d;">[Your Name]</span>
-
-## <span style="color:#6bcfff;">Acknowledgments</span>
-
-- <span style="color:#6bcfff;">Have I Been Pwned team for the breach database API</span>
-- <span style="color:#6bcfff;">zxcvbn library for additional password strength metrics</span>
-- <span style="color:#6bcfff;">Various wordlist maintainers for providing comprehensive password datasets</span>
-
----
-
-## <span style="color:#6bcfff;">Color Legend</span>
-
-- <span style="color:#ff6b6b;">🔴 Red: Critical/Weak passwords</span>
-- <span style="color:#ffa94d;">🟡 Yellow: Moderate warnings</span>
-- <span style="color:#00ff00;">🟢 Green: Strong/REAPER-CLASS passwords</span>
-- <span style="color:#6bcfff;">🔵 Blue: Information and status</span>
-- <span style="color:#ff6bcb;">🟣 Magenta: Highlights and emphasis</span>
+Reaper es una herramienta de auditoría defensiva pensada para evaluar tus propias contraseñas o las de sistemas que administras con autorización. No la uses contra credenciales que no te pertenecen.
