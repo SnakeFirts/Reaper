@@ -89,6 +89,15 @@ python reaper.py --no-hibp          # no consulta Have I Been Pwned (sin conexi�
 
 El programa muestra un reporte completo con score, hits de diccionario, detección de variantes, patrones detectados y una recomendación final.
 
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -v
+```
+
+Los tests corren contra diccionarios en memoria (no necesitan `wordlists.db` ni las wordlists descargadas), así que son rápidos y no dependen de red.
+
 ## Estructura del proyecto
 
 ```
@@ -96,6 +105,8 @@ Reaper/
 ├── reaper.py
 ├── scripts/
 │   └── build_wordlist_db.py   # construye wordlists/wordlists.db
+├── tests/
+│   └── test_reaper.py
 ├── wordlists/
 │   ├── common.txt
 │   ├── rockyou.txt                          (no versionado, ver Instalación)
@@ -105,6 +116,7 @@ Reaper/
 │       ├── 100k-most-used-passwords-NCSC.txt
 │       └── darkweb2017_top-10000.txt
 ├── requirements.txt
+├── requirements-dev.txt
 └── README.md
 ```
 
@@ -115,6 +127,10 @@ Reaper/
 - requests — consultas a la API de HIBP
 
 ## Changelog
+
+**v2.3**
+- Fix de bug: `normalize()` mangleaba sufijos numéricos (`P4ssw0rd123` → `passwordi2e`), causando falsos negativos en detección de variantes. Nueva `normalize_core()` preserva el sufijo.
+- Suite de tests con pytest (`tests/test_reaper.py`, 38 tests) cubriendo normalización, scoring, clasificación y detección de patrones.
 
 **v2.2**
 - Fix de seguridad: `NORMALIZED` ya no se mostraba enmascarada con `--mask`, filtrando casi toda la contraseña real.

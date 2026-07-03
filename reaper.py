@@ -21,8 +21,6 @@ DICTIONARY_WEIGHTS = {
     "darkweb": 20
 }
 
-# Rutas usadas solo como fallback si wordlists.db no existe todavia
-# (por ejemplo, si no se corrio scripts/build_wordlist_db.py).
 LEGACY_SOURCES = [
     ("common", "common.txt"),
     ("rockyou", "rockyou.txt"),
@@ -75,6 +73,26 @@ def normalize(password):
     return result
 
 
+def normalize_core(password):
+    """
+    Igual que normalize(), pero preservando el sufijo numerico como
+    sufijo en vez de tratarlo como leetspeak.
+
+    Bug que arregla: normalize() sustituye digitos en CUALQUIER
+    posicion, asi que "P4ssw0rd123" queda como "passwordi2e" (el "1"
+    y el "3" del sufijo se convierten en letras), y nunca hace match
+    con "password123" en el diccionario. Aqui separamos el sufijo
+    numerico final ANTES de sustituir, y lo dejamos intacto:
+    "P4ssw0rd123" -> core="P4ssw0rd", sufijo="123"
+                   -> normalize("P4ssw0rd") + "123" = "password123"
+    """
+    match = re.match(r"^(.*?)(\d+)$", password)
+    if match and match.group(1):
+        core, suffix = match.group(1), match.group(2)
+        return normalize(core) + suffix
+    return normalize(password)
+
+
 def lookup_word_db(conn, word):
     """Devuelve la lista de fuentes (dictionaries) en las que aparece `word`."""
     rows = conn.execute(
@@ -90,17 +108,21 @@ def check_dictionary(password, conn=None, dictionaries=None):
     return [name for name, dic in dictionaries.items() if password in dic]
 
 
-def check_variants(password, conn=None, dictionaries=None):
-    normalized = normalize(password)
+def _lookup_sources(candidate, conn, dictionaries):
     if conn is not None:
-        sources = lookup_word_db(conn, normalized)
+        return lookup_word_db(conn, candidate)
+    return [name for name, dic in dictionaries.items() if candidate in dic]
+
+
+def check_variants(password, conn=None, dictionaries=None):
+    full = normalize(password)
+    core = normalize_core(password)
+    
+    for candidate in (core, full) if core != full else (full,):
+        sources = _lookup_sources(candidate, conn, dictionaries)
         if sources:
-            return True, normalized, sources[0]
-        return False, normalized, None
-    for name, dic in dictionaries.items():
-        if normalized in dic:
-            return True, normalized, name
-    return False, normalized, None
+            return True, candidate, sources[0]
+    return False, full, None
 
 
 def detect_human_patterns(password):
@@ -117,13 +139,6 @@ def detect_human_patterns(password):
 
 
 def check_hibp(password):
-    """
-    Consulta Have I Been Pwned usando el modelo de k-anonimato:
-    solo se envían los primeros 5 caracteres del hash SHA-1, nunca
-    la contraseña ni el hash completo.
-    Retorna None si la consulta falló (no se pudo determinar),
-    y un int >= 0 si se pudo consultar.
-    """
     sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
     prefix, suffix = sha1[:5], sha1[5:]
     url = f"https://api.pwnedpasswords.com/range/{prefix}"
@@ -142,12 +157,6 @@ def check_hibp(password):
 
 
 def run_zxcvbn(password):
-    """
-    zxcvbn estima la fortaleza real basándose en entropía, patrones
-    de teclado, fechas, sustituciones l33t y coincidencias con listas
-    de palabras comunes que trae integradas. score va de 0 (pésima)
-    a 4 (excelente).
-    """
     result = zxcvbn(password)
     return {
         "score": result["score"],
@@ -158,13 +167,8 @@ def run_zxcvbn(password):
 
 
 def calculate_score(dictionary_hits, hibp_count, patterns, is_variant, zx_score):
-    # Base real de fortaleza: viene de zxcvbn, no de números inventados.
-    # zx_score va de 0 a 4 -> lo escalamos a 0-100.
     score = zx_score * 25
-
-    # Penalizaciones por señales que zxcvbn NO puede ver por sí solo:
-    # coincidencia literal con listas de filtraciones reales y
-    # apariciones confirmadas en breaches (HIBP).
+    
     dictionary_penalty = sum(
         DICTIONARY_WEIGHTS.get(hit, 5) + (5 if hit == "darkweb" else 0)
         for hit in dictionary_hits
@@ -175,17 +179,9 @@ def calculate_score(dictionary_hits, hibp_count, patterns, is_variant, zx_score)
         score -= 15
 
     if hibp_count is not None and hibp_count > 0:
-        # Antes: penalizacion fija de -40 sin importar si la contrasena
-        # aparecio 1 vez o 158,000 veces en filtraciones. Ahora escala
-        # con la magnitud (log10) del conteo:
-        #   1 ocurrencia    -> ~-34
-        #   158 ocurrencias -> ~-63
-        #   10,000+         -> -85 (tope), practicamente garantiza CRITICAL/WEAK
         hibp_penalty = min(85, 30 + 15 * math.log10(hibp_count + 1))
         score -= hibp_penalty
 
-    # Los patrones "humanos" ya los detecta zxcvbn en buena medida,
-    # así que aquí pesan menos que antes (eran -10, ahora -5).
     score -= len(patterns) * 5
 
     return max(0, min(100, round(score)))
@@ -211,7 +207,7 @@ def mask_password(password):
 
 
 def print_separator():
-    print("-" * 60)
+    print("-" * 50)
 
 
 def print_label(label, value):
@@ -236,7 +232,7 @@ def generate_report(display_password, score, classification, hibp_count,
     print("  ██   ██ ██      ██   ██ ██      ██      ██   ██")
     print("  ██   ██ ███████ ██   ██ ██      ███████ ██   ██")
     print("")
-    print("  [PASSWORD SECURITY ANALYSIS - v2.1]")
+    print("  [PASSWORD SECURITY ANALYSIS - v2.3]")
     print("  [CODENAME: REAPER]")
     print("")
     print_separator()
