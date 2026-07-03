@@ -29,11 +29,12 @@ Analizador de seguridad de contraseñas en terminal. Evalúa una contraseña con
 
 ## Características
 
-- **Chequeo contra diccionarios**: common, rockyou, xato-net, NCSC top 100k y darkweb top 10k, cada uno con un peso distinto en el score final.
+- **Chequeo contra diccionarios**: common, rockyou, xato-net, NCSC top 100k y darkweb top 10k, cada uno con un peso distinto en el score final. Consultas indexadas vía SQLite (ver [Base de datos de wordlists](#base-de-datos-de-wordlists-recomendado)), no carga completa en RAM.
 - **Detección de variantes**: normaliza leetspeak (`4→a`, `3→e`, `1→i`, `0→o`, etc.) para detectar contraseñas como `P4ssw0rd` aunque no estén literales en el diccionario.
 - **Patrones humanos**: repetición de caracteres, secuencias simples (`123`, `abc`), prefijos/sufijos comunes.
-- **Integración con HIBP**: consulta cuántas veces apareció el hash de la contraseña en filtraciones conocidas, usando solo los primeros 5 caracteres del hash SHA-1 (k-anonimato).
+- **Integración con HIBP**: consulta cuántas veces apareció el hash de la contraseña en filtraciones conocidas, usando solo los primeros 5 caracteres del hash SHA-1 (k-anonimato). La penalización en el score escala logarítmicamente con el número de ocurrencias (no es lo mismo aparecer 1 vez que 100,000).
 - **Score y clasificación**: de `CRITICAL` a `REAPER-CLASS`, con reporte estilo terminal.
+- **Enmascarado consistente**: con `--mask` (por defecto), tanto la contraseña original como su versión normalizada se muestran ocultas — no se filtra la contraseña real en el reporte.
 
 ## Instalación
 
@@ -55,7 +56,15 @@ curl -L -o wordlists/rockyou.txt https://raw.githubusercontent.com/brannondorsey
 # xato-net y las listas de seclists: descargar desde SecLists (github.com/danielmiessler/SecLists)
 ```
 
-También puedes usar el script `scripts/download_wordlists.sh` (ver sección Roadmap) si prefieres automatizarlo.
+### Base de datos de wordlists (recomendado)
+
+Por defecto, `reaper.py` puede analizar contraseñas cargando los `.txt` completos en memoria, pero eso es lento (varios segundos) porque `xato-net` solo trae más de 5 millones de líneas. Para evitarlo, construye una base SQLite indexada una sola vez:
+
+```bash
+python3 scripts/build_wordlist_db.py
+```
+
+Esto genera `wordlists/wordlists.db` (no se versiona, pesa ~200MB). Reaper la detecta automáticamente y usa consultas indexadas en vez de cargar todo a RAM — el análisis pasa de varios segundos a un instante. Si no corres este script, Reaper sigue funcionando con el método anterior (más lento) y te avisa.
 
 ## Uso
 
@@ -64,17 +73,34 @@ python reaper.py
 Enter password to analyze: ********
 ```
 
-El programa limpia la pantalla y muestra un reporte completo con score, hits de diccionario, detección de variantes, patrones detectados y una recomendación final.
+También puedes pasar la contraseña directo (queda en tu historial de shell, úsalo solo para pruebas) y controlar el enmascarado y la consulta a HIBP:
+
+```bash
+python reaper.py --password "miContraseña123"
+python reaper.py --no-mask          # muestra la contraseña sin ocultar en el reporte
+python reaper.py --no-hibp          # no consulta Have I Been Pwned (sin conexión a internet)
+```
+
+| Opción | Default | Descripción |
+|---|---|---|
+| `--password`, `-p` | (prompt interactivo, sin eco) | Contraseña a analizar |
+| `--mask` / `--no-mask` | `--mask` | Oculta la contraseña (y su versión normalizada) en el reporte final |
+| `--hibp` / `--no-hibp` | `--hibp` | Consulta Have I Been Pwned |
+
+El programa muestra un reporte completo con score, hits de diccionario, detección de variantes, patrones detectados y una recomendación final.
 
 ## Estructura del proyecto
 
 ```
 Reaper/
 ├── reaper.py
+├── scripts/
+│   └── build_wordlist_db.py   # construye wordlists/wordlists.db
 ├── wordlists/
 │   ├── common.txt
-│   ├── rockyou.txt          (no versionado, ver Instalación)
+│   ├── rockyou.txt                          (no versionado, ver Instalación)
 │   ├── xato-net-10-million-passwords.txt
+│   ├── wordlists.db                         (no versionado, generado por build_wordlist_db.py)
 │   └── seclists/
 │       ├── 100k-most-used-passwords-NCSC.txt
 │       └── darkweb2017_top-10000.txt
@@ -87,6 +113,13 @@ Reaper/
 - Python 3
 - [zxcvbn](https://github.com/dropbox/zxcvbn) — estimación de fortaleza
 - requests — consultas a la API de HIBP
+
+## Changelog
+
+**v2.2**
+- Fix de seguridad: `NORMALIZED` ya no se mostraba enmascarada con `--mask`, filtrando casi toda la contraseña real.
+- Penalización de HIBP ahora escala con el número de ocurrencias (antes era un `-40` fijo sin importar si eran 1 o 100,000 apariciones).
+- Wordlists indexadas en SQLite (`scripts/build_wordlist_db.py`) en vez de cargarse completas a RAM en cada ejecución.
 
 ## Disclaimer
 

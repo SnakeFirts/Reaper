@@ -1,3 +1,6 @@
+from pathlib import Path
+import sqlite3
+import math
 from zxcvbn import zxcvbn
 import re
 import hashlib
@@ -6,6 +9,10 @@ import typer
 
 app = typer.Typer(add_completion=False)
 
+BASE_DIR = Path(__file__).resolve().parent
+WORDLISTS_DIR = BASE_DIR / "wordlists"
+DB_PATH = WORDLISTS_DIR / "wordlists.db"
+
 DICTIONARY_WEIGHTS = {
     "common": 5,
     "rockyou": 15,
@@ -13,6 +20,27 @@ DICTIONARY_WEIGHTS = {
     "ncsc": 12,
     "darkweb": 20
 }
+
+# Rutas usadas solo como fallback si wordlists.db no existe todavia
+# (por ejemplo, si no se corrio scripts/build_wordlist_db.py).
+LEGACY_SOURCES = [
+    ("common", "common.txt"),
+    ("rockyou", "rockyou.txt"),
+    ("xato", "xato-net-10-million-passwords.txt"),
+    ("ncsc", "seclists/100k-most-used-passwords-NCSC.txt"),
+    ("darkweb", "seclists/darkweb2017_top-10000.txt"),
+]
+
+
+def get_db_connection():
+    """
+    Devuelve una conexion a wordlists.db, o None si no existe.
+    La base se construye una sola vez con scripts/build_wordlist_db.py
+    en vez de cargar millones de lineas a memoria en cada ejecucion.
+    """
+    if not DB_PATH.exists():
+        return None
+    return sqlite3.connect(DB_PATH)
 
 
 def load_dictionary(path):
@@ -24,9 +52,12 @@ def load_dictionary(path):
         return set()
 
 
-def check_dictionary(password, dictionaries):
-    password = password.lower()
-    return [name for name, dic in dictionaries.items() if password in dic]
+def load_legacy_dictionaries():
+    """Fallback lento (carga todo a RAM) si no existe wordlists.db."""
+    dictionaries = {}
+    for name, relative_path in LEGACY_SOURCES:
+        dictionaries[name] = load_dictionary(str(WORDLISTS_DIR / relative_path))
+    return dictionaries
 
 
 def normalize(password):
@@ -44,8 +75,28 @@ def normalize(password):
     return result
 
 
-def check_variants(password, dictionaries):
+def lookup_word_db(conn, word):
+    """Devuelve la lista de fuentes (dictionaries) en las que aparece `word`."""
+    rows = conn.execute(
+        "SELECT DISTINCT source FROM words WHERE word = ?", (word,)
+    ).fetchall()
+    return [row[0] for row in rows]
+
+
+def check_dictionary(password, conn=None, dictionaries=None):
+    password = password.lower()
+    if conn is not None:
+        return lookup_word_db(conn, password)
+    return [name for name, dic in dictionaries.items() if password in dic]
+
+
+def check_variants(password, conn=None, dictionaries=None):
     normalized = normalize(password)
+    if conn is not None:
+        sources = lookup_word_db(conn, normalized)
+        if sources:
+            return True, normalized, sources[0]
+        return False, normalized, None
     for name, dic in dictionaries.items():
         if normalized in dic:
             return True, normalized, name
@@ -124,7 +175,14 @@ def calculate_score(dictionary_hits, hibp_count, patterns, is_variant, zx_score)
         score -= 15
 
     if hibp_count is not None and hibp_count > 0:
-        score -= 40
+        # Antes: penalizacion fija de -40 sin importar si la contrasena
+        # aparecio 1 vez o 158,000 veces en filtraciones. Ahora escala
+        # con la magnitud (log10) del conteo:
+        #   1 ocurrencia    -> ~-34
+        #   158 ocurrencias -> ~-63
+        #   10,000+         -> -85 (tope), practicamente garantiza CRITICAL/WEAK
+        hibp_penalty = min(85, 30 + 15 * math.log10(hibp_count + 1))
+        score -= hibp_penalty
 
     # Los patrones "humanos" ya los detecta zxcvbn en buena medida,
     # así que aquí pesan menos que antes (eran -10, ahora -5).
@@ -170,7 +228,7 @@ def print_list_label(label, items, empty_text):
 
 
 def generate_report(display_password, score, classification, hibp_count,
-                     dictionary_hits, patterns, normalized, variant_source, zx):
+                     dictionary_hits, patterns, normalized, variant_source, zx, masked=True):
     print("\n")
     print("  ██████  ███████  █████  ██████  ███████ ██████")
     print("  ██   ██ ██      ██   ██ ██   ██ ██      ██   ██")
@@ -184,8 +242,10 @@ def generate_report(display_password, score, classification, hibp_count,
     print_separator()
     print("")
 
+    display_normalized = mask_password(normalized) if masked else normalized
+
     print_label("TARGET", display_password)
-    print_label("NORMALIZED", normalized)
+    print_label("NORMALIZED", display_normalized)
     print("")
     print_separator()
     print("")
@@ -252,16 +312,20 @@ def generate_report(display_password, score, classification, hibp_count,
 
 
 def analizar_password(password, mask=True, use_hibp=True):
-    dictionaries = {
-        "common": load_dictionary("wordlists/common.txt"),
-        "rockyou": load_dictionary("wordlists/rockyou.txt"),
-        "xato": load_dictionary("wordlists/xato-net-10-million-passwords.txt"),
-        "ncsc": load_dictionary("wordlists/seclists/100k-most-used-passwords-NCSC.txt"),
-        "darkweb": load_dictionary("wordlists/seclists/darkweb2017_top-10000.txt"),
-    }
+    conn = get_db_connection()
+    dictionaries = None
+    if conn is None:
+        print("[!] wordlists.db no encontrado. Usando modo lento (carga completa en RAM).")
+        print("[!] Corre 'python3 scripts/build_wordlist_db.py' para acelerar futuras ejecuciones.\n")
+        dictionaries = load_legacy_dictionaries()
 
-    dictionary_hits = check_dictionary(password, dictionaries)
-    is_variant, normalized, variant_source = check_variants(password, dictionaries)
+    try:
+        dictionary_hits = check_dictionary(password, conn=conn, dictionaries=dictionaries)
+        is_variant, normalized, variant_source = check_variants(password, conn=conn, dictionaries=dictionaries)
+    finally:
+        if conn is not None:
+            conn.close()
+
     patterns = detect_human_patterns(password)
     zx = run_zxcvbn(password)
     hibp_count = check_hibp(password) if use_hibp else None
@@ -272,7 +336,7 @@ def analizar_password(password, mask=True, use_hibp=True):
     display_password = mask_password(password) if mask else password
 
     generate_report(display_password, score, classification, hibp_count,
-                     dictionary_hits, patterns, normalized, variant_source, zx)
+                     dictionary_hits, patterns, normalized, variant_source, zx, masked=mask)
 
 
 @app.command()
